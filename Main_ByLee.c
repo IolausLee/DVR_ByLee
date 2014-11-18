@@ -35,7 +35,7 @@
 
 //定向
 #define f 50  //逆变器输出频率
-#define T 1.0/50
+#define T 1.0/50//周期
 #define phi 0  //逆变器输出相位角
 #define w 2*pi*f 
 //#define w_IQ _IQmpy( _IQ(2) , _IQmpy( _IQ(pi) , _IQ(f)))
