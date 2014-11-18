@@ -19,7 +19,7 @@
 #define Ku 151.11		//LV25_P电压传感器放大倍数。当限流电阻为110kΩ，测量电阻270Ω
 #define Kcur 6.67		//用LA55-P/SP50电流传感器，测量电阻为150Ω
 #define Res 0.000305	//AD芯片的分辨率
-#define U_max 20        //
+#define U_max 20        //继保动作电压
 
 
 //采样频率和延迟点数
