@@ -405,7 +405,7 @@ void inverter_pll_calc(void)
 	//ip.sinc=(float)sin(w*Tk*cnt+phi+0.66*pi);
 
 	angle_IQ=_IQ(cnt * Tk * w);
-	delta_phi_IQ=_IQ(0.66666 * pi);
+	delta_phi_IQ=_IQ(0.66666 * pi);//“∆œ‡120∂»
 	
 	sina_IQ=_IQsin(angle_IQ);
 	sinb_IQ=_IQsin(angle_IQ - delta_phi_IQ);
@@ -414,11 +414,6 @@ void inverter_pll_calc(void)
 	ip.sina=_IQ24toF( sina_IQ );
 	ip.sinb=_IQ24toF( sinb_IQ );
 	ip.sinc=_IQ24toF( sinc_IQ );
-	 
-	//sin_out=_IQsin(angle - phi_b);
-	
-	//w=_IQmpy(
-	//sin_out=_IQ24sin(_IQ24mpy( _IQ24(w) , _IQ24mpy( _IQ24(Tk) , _IQ24(cnt) ) ) );//+_IQmpy(_IQ(0.66),_IQ(pi)));
 
 	/* Graphic */
 	//a[cnt]=ip.sinb;

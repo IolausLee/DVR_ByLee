@@ -1,7 +1,7 @@
 ******************************************************************************
              TMS320C2000 Linker PC v5.2.3                      
 ******************************************************************************
->> Linked Fri Nov 14 20:55:51 2014
+>> Linked Thu Nov 27 20:41:16 2014
 
 OUTPUT FILE NAME:   <AD_ByLee.out>
 ENTRY POINT SYMBOL: "_c_int00"  address: 003f88d8
@@ -451,7 +451,7 @@ ffffffff   ___pinit__
 003f891c   _ldexp
 003f80ba   _line_to_phase
 003f8122   _main
-003f9032   _park
+003f9032   _p
 003f8067   _park_calc
 003f8477   _pi_calc
 003f9022   _pll
@@ -646,7 +646,7 @@ address    name
 003f9026   _c
 003f902a   _c2
 003f902e   _ap
-003f9032   _park
+003f9032   _p
 003f9036   _l2p
 003f9040   _ac
 003f9046   _ip
