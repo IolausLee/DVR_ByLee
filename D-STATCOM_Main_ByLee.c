@@ -23,14 +23,14 @@
 
 
 //采样频率和延迟点数
-#define fk 7.0               //采样频率,单位为kHz
+#define fk 5.0               //采样频率,单位为kHz
 //#define V_Dly 90.0              //延迟90°
 #define V_T1PR 37.5*1000.0/2.0/fk   //连续增/减模式37.5*1000/2.0/fk；连续增模式37.5*1000/fk-1
 //#define Dot fk*20.0          //一个周期的点数,0.02/Ts
 //#define Dly V_Dly*fk*20.0/360.0    //需要延迟的点数
 #define V_ACTRA 0x0666    //低有效0x0999.高有效则为0x0666
 #define V_T1CON 0x0942    //定时器T1时钟脉冲：37.5MHz,连续增/减模式0942;连续增模式1142
-#define V_DBTCONA 0x0AEC  //设置死区；设0x0AEC时，死区时间为4.27us
+#define V_DBTCONA 0x0FF4  //设置死区；设0x0AEC时，死区时间为4.27us
 #define Tk 1.0/fk/1000
 
 //定向
@@ -56,15 +56,15 @@
 // #define Udc_ref 20
 // #define Iq_ref 0
 
-#define I_PI_Kp 4
-#define I_PI_Ki 150
+#define I_PI_Kp 100
+#define I_PI_Ki 0
 #define I_PI_OutMax 300
 #define I_PI_OutMin -300
 
-#define Id_Ref 3.11
+#define Id_Ref 0.3
 #define Iq_Ref 0
 
-#define Udc_ref 20
+//#define Udc_ref 20
 
 
 //Uint16 EVAInterruptCount;
@@ -84,11 +84,11 @@ unsigned int cnt=0;//
 //unsigned int xint=0,tint=0;
 float sample_time=Tk;
 
-//float U1,U2;
+float U1,U2;
 float I1,I2,Udc;
-//float U1_offset=0,U2_offset=0;
+float U1_offset=0,U2_offset=0;
 float I1_offset=0,I2_offset=0,Udc_offset=0;
-//float U1_offset_temp=0,U2_offset_temp=0;
+float U1_offset_temp=0,U2_offset_temp=0;
 float I1_offset_temp=0,I2_offset_temp=0,Udc_offset_temp=0;
 float Ua_pwm,Ub_pwm,Uc_pwm;
 
@@ -134,8 +134,8 @@ PI_Ctrl PI_Id={
 				0.0,			// Variable: Proportional output  
 				0.0,			// Variable: Integral output  
 				0.0,		    // Variable: Pre-saturated output 
-				600,		// Parameter: Maximum output 
-				-600,		// Parameter: Minimum output 
+				210,		// Parameter: Maximum output 
+				-210,		// Parameter: Minimum output 
 				0.0   		// Output: PID output 
 				};
 PI_Ctrl PI_Iq={
@@ -147,8 +147,8 @@ PI_Ctrl PI_Iq={
 				0.0,			// Variable: Proportional output  
 				0.0,			// Variable: Integral output  
 				0.0,		    // Variable: Pre-saturated output 
-				600,		// Parameter: Maximum output 
-				-600,		// Parameter: Minimum output 
+				210,		// Parameter: Maximum output 
+				-210,		// Parameter: Minimum output 
 				0.0   		// Output: PID output 
 				};
 // PI_Ctrl PI_Ic={
@@ -225,7 +225,7 @@ void main(void)
 	EvaRegs.T1CON.all=V_T1CON;  //0x0942,
 	EvaRegs.ACTRA.all = V_ACTRA;    //低有效0x0999.高有效则为0x0666
 	EvaRegs.DBTCONA.all = V_DBTCONA;   //设置死区
-	EvaRegs.COMCONA.all = 0xA600;     //0xA600,时间4.27us
+	EvaRegs.COMCONA.all = 0xA600;     //0xA600
 
 	
 //当通用目的定时器1产生中断时启动ADC变换
@@ -272,22 +272,23 @@ void main(void)
 				
 				
 				/**采样完成后开始数据处理**/
+				clarke_calc(&c_U,l2p_U.a,l2p_U.b);
+				pll_calc(&pll,c_U.Alpha,c_U.Beta);
 
-				pll_calc(&pll,l2p_U.a,l2p_U.b);
 
 				clarke_calc(&c_I,I1,I2);
-				park_calc(&p_I,c_I.Alpha,c_I,Beta);
+				park_calc(&p_I,c_I.Alpha,c_I.Beta,pll.sin,pll.cos);
 
 				pi_calc(&PI_Id,Id_Ref,p_I.Ds);
 				pi_calc(&PI_Iq,Iq_Ref,p_I.Qs);
 
-				antipark_calc(&ap,PI_Id.Out,PI_Iq.Out,pll.sina,pll.cos);
+				antipark_calc(&ap,PI_Id.Out,PI_Iq.Out,pll.sin,pll.cos);
 				anticlarke_calc(&ac,ap.Alpha,ap.Beta);
 
 				/******归一化*********/
-				Ua_pwm=0.5+ac.As/1000;
-				Ub_pwm=0.5+ac.Bs/1000;
-				Uc_pwm=0.5+ac.Cs/1000;
+				Ua_pwm=0.5+ac.As/600;
+				Ub_pwm=0.5+ac.Bs/600;
+				Uc_pwm=0.5+ac.Cs/600;
 				/********************/
 
 				/**设定占空比（比较中断）**/
@@ -362,7 +363,7 @@ void ADCSmplePro(ADC_DRV *v)
 	I1=(signed int)v->ADSampleResult2[x]*Ku*Res-I1_offset;	
 	I2=(signed int)v->ADSampleResult3[x]*Ku*Res-I2_offset;
 
-	Udc=(signed int)v->ADSampleResult4[x]*Ku*Res-Udc_offset;
+	//Udc=(signed int)v->ADSampleResult4[x]*Ku*Res-Udc_offset;
 
 	if(AD_corrention_flag==1) {
 		

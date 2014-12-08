@@ -19,6 +19,7 @@ $(GEN_CMDS_QUOTED) \
 "./source/DSP281x_DefaultIsr.obj" \
 "./source/DSP281x_Adc.obj" \
 -l"libc.a" \
+-l"rts2800_ml.lib" \
 "../lib/IQmath.lib" \
 "../cmd/DSP281x_Headers_nonBIOS.cmd" \
 "../cmd/F2812_EzDSP_RAM_lnk.cmd" \
@@ -122,7 +123,7 @@ all: D-STATCOM_ByLee.out
 D-STATCOM_ByLee.out: $(GEN_CMDS) $(OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: Linker'
-	"D:/Program Files/Texas Instruments/ccsv4/tools/compiler/c2000/bin/cl2000" --silicon_version=28 -g --diag_warning=225 --large_memory_model -z -m"D-STATCOM_ByLee.map" --warn_sections -i"D:/Program Files/Texas Instruments/ccsv4/tools/compiler/c2000/lib" -i"D:/Program Files/Texas Instruments/ccsv4/tools/compiler/c2000/include" --reread_libs --rom_model -o "D-STATCOM_ByLee.out" $(ORDERED_OBJS)
+	"D:/Program Files/Texas Instruments/ccsv4/tools/compiler/c2000/bin/cl2000" --silicon_version=28 -g --define="_DEBUG" --define="LARGE_MODEL" --diag_warning=225 --large_memory_model --unified_memory -z -m"D-STATCOM_ByLee.map" --stack_size=0x400 --warn_sections -i"D:/Program Files/Texas Instruments/ccsv4/tools/compiler/c2000/lib" -i"D:/Program Files/Texas Instruments/ccsv4/tools/compiler/c2000/include" --reread_libs --rom_model -o "D-STATCOM_ByLee.out" $(ORDERED_OBJS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
