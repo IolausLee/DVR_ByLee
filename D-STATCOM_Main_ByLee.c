@@ -34,23 +34,38 @@
 #define Tk 1.0/fk/1000
 
 //定向
-#define f 50  //逆变器输出频率
-#define T 1.0/50//周期
-#define phi 0  //逆变器输出相位角
-#define w 2*pi*f 
+// #define f 50  //逆变器输出频率
+// #define T 1.0/50//周期
+// #define phi 0  //逆变器输出相位角
+// #define w 2*pi*f 
+
 //#define w_IQ _IQmpy( _IQ(2) , _IQmpy( _IQ(pi) , _IQ(f)))
 
 //#define count (/Tk)
 
 //PI
 
-#define PI_Kp 4
-#define PI_Ki 150
-#define PI_OutMax 300
-#define PI_OutMin -300
+// #define PI_Kp 4
+// #define PI_Ki 150
+// #define PI_OutMax 300
+// #define PI_OutMin -300
 
-#define Ud_Ref 3.11
-#define Uq_Ref 0
+// #define Ud_Ref 3.11
+// #define Uq_Ref 0
+
+// #define Udc_ref 20
+// #define Iq_ref 0
+
+#define I_PI_Kp 4
+#define I_PI_Ki 150
+#define I_PI_OutMax 300
+#define I_PI_OutMin -300
+
+#define Id_Ref 3.11
+#define Iq_Ref 0
+
+#define Udc_ref 20
+
 
 //Uint16 EVAInterruptCount;
 Uint16 x=0;//temp[128],
@@ -69,9 +84,9 @@ unsigned int cnt=0;//
 //unsigned int xint=0,tint=0;
 float sample_time=Tk;
 
-float U1,U2;
-float U1_offset=0,U2_offset=0;
-float U1_offset_temp=0,U2_offset_temp=0;
+float U1,U2,I1,I2,Udc;
+float U1_offset=0,U2_offset=0,I1_offset=0,I2_offset=0,Udc_offset=0;
+float U1_offset_temp=0,U2_offset_temp=0,I1_offset_temp=0,I2_offset_temp=0,Udc_offset_temp=0;
 float Ua_pwm,Ub_pwm,Uc_pwm;
 
 interrupt void ADC_T1TOADC_isr(void);
@@ -87,38 +102,65 @@ void pi_calc(PI_Ctrl *p,float Ref,float Feedback);
 ADC_DRV AD=ADC_DRV_DEFAULTS;
 inverter_pll ip;
 PLL pll;
-line2phase l2p;
-CLARKE c,c2;
-PARK p;
+line2phase l2p_U,l2p_I;
+CLARKE c_U,c_I,c2;
+PARK p_i;
 ANTICLARKE ac;
 ANTIPARK ap;
 
-PI_Ctrl PI_d={
-				//4.0,			// Parameter: Proportional gain  比例系数
-				//150.0,			// Parameter: Integral gain  积分强度
-				//Ud_Ref,   		// Input: Reference input 给定值
-				//0.0,   		// Input: Feedback input 反馈值
-				0.0,			// Variable: Error   误差
-				0.0,			// Variable: Proportional output  比例输出 
-				0.0,			// Variable: Integral output  积分输出
-				0.0,		// Variable: Pre-saturated output 预输出
-				//PI_OutMax,		// Parameter: Maximum output 输出最大值
-				//PI_OutMin,		// Parameter: Minimum output 输出最小值
-				0.0   		// Output: PID output PID输出
-				};
-PI_Ctrl PI_q={
-				//4.0,			// Parameter: Proportional gain  
-				//150.0,			// Parameter: Integral gain  
+/*PI_Ctrl PI_Udc={
+				4.0,			// Parameter: Proportional gain  
+				150.0,			// Parameter: Integral gain  
 				//Uq_Ref,   		// Input: Reference input 
 				//0.0,   		// Input: Feedback input 
 				0.0,			// Variable: Error   
 				0.0,			// Variable: Proportional output  
 				0.0,			// Variable: Integral output  
-				0.0,		// Variable: Pre-saturated output 
-				//PI_OutMax,		// Parameter: Maximum output 
-				//PI_OutMin,		// Parameter: Minimum output 
+				0.0,		    // Variable: Pre-saturated output 
+				300,		// Parameter: Maximum output 
+				-300,		// Parameter: Minimum output 
+				0.0   		// Output: PID output 
+				};*/
+
+/*PI_Ctrl PI_Ia={
+				30.0,			// Parameter: Proportional gain  
+				0,			// Parameter: Integral gain  
+				//Uq_Ref,   		// Input: Reference input 
+				//0.0,   		// Input: Feedback input 
+				0.0,			// Variable: Error   
+				0.0,			// Variable: Proportional output  
+				0.0,			// Variable: Integral output  
+				0.0,		    // Variable: Pre-saturated output 
+				600,		// Parameter: Maximum output 
+				-600,		// Parameter: Minimum output 
 				0.0   		// Output: PID output 
 				};
+PI_Ctrl PI_Ib={
+				30.0,			// Parameter: Proportional gain  
+				0,			// Parameter: Integral gain  
+				//Uq_Ref,   		// Input: Reference input 
+				//0.0,   		// Input: Feedback input 
+				0.0,			// Variable: Error   
+				0.0,			// Variable: Proportional output  
+				0.0,			// Variable: Integral output  
+				0.0,		    // Variable: Pre-saturated output 
+				600,		// Parameter: Maximum output 
+				-600,		// Parameter: Minimum output 
+				0.0   		// Output: PID output 
+				};
+PI_Ctrl PI_Ic={
+				30.0,			// Parameter: Proportional gain  
+				0,			// Parameter: Integral gain  
+				//Uq_Ref,   		// Input: Reference input 
+				//0.0,   		// Input: Feedback input 
+				0.0,			// Variable: Error   
+				0.0,			// Variable: Proportional output  
+				0.0,			// Variable: Integral output  
+				0.0,		    // Variable: Pre-saturated output 
+				600,		// Parameter: Maximum output 
+				-600,		// Parameter: Minimum output 
+				0.0   		// Output: PID output 
+				};*/
 
 
 
@@ -232,24 +274,51 @@ void main(void)
 				
 				
 				/**采样完成后开始数据处理**/
-				inverter_pll_calc();//计算相位
+				//inverter_pll_calc();//计算相位
+				
+				//clarke_calc(&c_U,l2p_U.a,l2p_U.b,l2p_U.c);
+				clarke_calc(&c_U,l2p_U.a,l2p_U.b);
+				
+				pll_calc(&pll,c_U.Alpha,c_U.Beta);
+
+				if(pll.sin > 0.9999)
+					pll.sin=0.9999;
+				if(pll.cos > 0.9999)
+					pll.cos=0.9999;
+
+//void pi_calc(PI_Ctrl *p,float Ref,float Feedback) 
+				pi_calc(&PI_Udc,Udc_ref,Udc);
+
+
+//int antipark_calc(ANTIPARK *ap,float Ds,float Qs,float sina,float cosa)
+				antipark_calc(&ap,PI_Udc.Out,Iq_ref,pll.sin,pll.cos);
+//int anticlarke_calc(ANTICLARKE *ac,float Alpha,float Beta)
+				anticlarke_calc(&ac,ap.Alpha,ap.Beta);
+
+//void pi_calc(PI_Ctrl *p,float Ref,float Feedback) 
+				pi_calc(&PI_Ia,ac.As,l2p_I.a);
+				pi_calc(&PI_Ib,ac.Bs,l2p_I.b);
+				pi_calc(&PI_Ic,ac.Cs,l2p_I.c);
+
+
 				
 				
 //int clarke_calc(CLARKE *c,float As,float Bs,float Cs)		
-				clarke_calc(&c,l2p.Ua,l2p.Ub,l2p.Uc);//
+				//clarke_calc(&c_U,l2p_U.Ua,l2p_U.Ub,l2p_U.Uc);//
+				//clarke_calc(&c_I,l2p_I.Ua,l2p_I.Ub,l2p_I.Uc);//
 
 //int park_calc(PARK *p,float Alpha,float Beta,float sina,float cosa)
-				park_calc(&p,c.Alpha,c.Beta,pll.sin,pll.cos);//
+				//park_calc(&p_i,c_I.Alpha,c_I.Beta,pll.sin,pll.cos);//
 				
-//void pi_calc(PI_Ctrl *p,float Ref,float Feedback) 
-				pi_calc(&PI_d,Ud_Ref,p.Ds);//
-				pi_calc(&PI_q,Uq_Ref,p.Qs);//
+
+				//pi_calc(&PI_d,Ud_Ref,p.Ds);//
+				//pi_calc(&PI_q,Uq_Ref,p.Qs);//
 
 //int antipark_calc(ANTIPARK *ap,float Ds,float Qs,float sina,float cosa)
-				antipark_calc(&ap,PI_d.Out,PI_q.Out,pll.sin,pll.cos);//
+				//antipark_calc(&ap,PI_d.Out,PI_q.Out,pll.sin,pll.cos);//
 
-//int anticlarke_calc(ANTICLARKE *ac,float Alpha,float Beta)
-				anticlarke_calc(&ac,ap.Alpha,ap.Beta);//
+
+				//anticlarke_calc(&ac,ap.Alpha,ap.Beta);//
 				
 
 				/******归一化*********/
@@ -338,6 +407,11 @@ void ADCSmplePro(ADC_DRV *v)
 
 	U1=(signed int)v->ADSampleResult0[x]*Ku*Res-U1_offset;	
 	U2=(signed int)v->ADSampleResult1[x]*Ku*Res-U2_offset;
+	
+	I1=(signed int)v->ADSampleResult2[x]*Ku*Res-I1_offset;	
+	I2=(signed int)v->ADSampleResult3[x]*Ku*Res-I2_offset;
+
+	Udc=(signed int)v->ADSampleResult4[x]*Ku*Res-Udc_offset;
 
 	if(AD_corrention_flag==1) {
 		
@@ -352,6 +426,18 @@ void ADCSmplePro(ADC_DRV *v)
 		U2_offset=U2_offset_temp/(x+1);//计算下次估计偏移值
 
 		//if(U2_offset>20) while(1);
+		
+		I1_offset=I1+I1_offset;//计算当前实际偏移值
+		I1_offset_temp+=I1_offset;//累计偏移值
+		I1_offset=I1_offset_temp/(x+1);//计算下次估计偏移值
+		
+		I2_offset=I2+I2_offset;//计算当前实际偏移值
+		I2_offset_temp+=I2_offset;//累计偏移值
+		I2_offset=I2_offset_temp/(x+1);//计算下次估计偏移值
+
+		Udc_offset=Udc+Udc_offset;//计算当前实际偏移值
+		Udc_offset_temp+=Udc_offset;//累计偏移值
+		Udc_offset=Udc_offset_temp/(x+1);//计算下次估计偏移值
 
 		if(x==50) //计算50次后停止校正
 			AD_corrention_flag=0;
@@ -372,7 +458,8 @@ void ADCSmplePro(ADC_DRV *v)
 
 
 /***int line_to_phase(line2phase *l,float Uab,float Ubc)***********/
-	line_to_phase(&l2p,U1,U2);//
+	line_to_phase(&l2p_U,U1,U2);//
+	line_to_phase(&l2p_I,I1,I2);
 
 
 /******Graphic*******/
@@ -388,60 +475,60 @@ void ADCSmplePro(ADC_DRV *v)
 	
 }
 
-void inverter_pll_calc(void)
-{
-	//_iq sin_out;
-	_iq angle_IQ,delta_phi_IQ;
-	_iq sina_IQ,sinb_IQ,sinc_IQ;
+// void inverter_pll_calc(void)
+// {
+// 	//_iq sin_out;
+// 	_iq angle_IQ,delta_phi_IQ;
+// 	_iq sina_IQ,sinb_IQ,sinc_IQ;
 	
 	
-	if(cnt > (fk*1000/f)) //
-		cnt = 0;
-	else 
-		cnt++;
+// 	if(cnt > (fk*1000/f)) //
+// 		cnt = 0;
+// 	else 
+// 		cnt++;
 	
-	//ip.sina=(float)sin(w*Tk*cnt+phi);
-	//ip.sinb=(float)sin(w*Tk*cnt+phi-0.66*pi);
-	//ip.sinc=(float)sin(w*Tk*cnt+phi+0.66*pi);
+// 	//ip.sina=(float)sin(w*Tk*cnt+phi);
+// 	//ip.sinb=(float)sin(w*Tk*cnt+phi-0.66*pi);
+// 	//ip.sinc=(float)sin(w*Tk*cnt+phi+0.66*pi);
 
-	angle_IQ=_IQ(cnt * Tk * w);
-	delta_phi_IQ=_IQ(0.66666 * pi);//移相120度
+// 	angle_IQ=_IQ(cnt * Tk * w);
+// 	delta_phi_IQ=_IQ(0.66666 * pi);//移相120度
 	
-	sina_IQ=_IQsin(angle_IQ);
-	sinb_IQ=_IQsin(angle_IQ - delta_phi_IQ);
-	sinc_IQ=_IQsin(angle_IQ + delta_phi_IQ);
+// 	sina_IQ=_IQsin(angle_IQ);
+// 	sinb_IQ=_IQsin(angle_IQ - delta_phi_IQ);
+// 	sinc_IQ=_IQsin(angle_IQ + delta_phi_IQ);
 	
-	ip.sina=_IQ24toF( sina_IQ );
-	ip.sinb=_IQ24toF( sinb_IQ );
-	ip.sinc=_IQ24toF( sinc_IQ );
+// 	ip.sina=_IQ24toF( sina_IQ );
+// 	ip.sinb=_IQ24toF( sinb_IQ );
+// 	ip.sinc=_IQ24toF( sinc_IQ );
 
-	/* Graphic */
-	//a[cnt]=ip.sinb;
-	//b[cnt]=_IQ24toF(sin_out);
-	/* Graphic end */
+// 	/* Graphic */
+// 	//a[cnt]=ip.sinb;
+// 	//b[cnt]=_IQ24toF(sin_out);
+// 	/* Graphic end */
 
-	if(ip.sina > 0.9999)
-		ip.sina=0.9999;
-	if(ip.sinb > 0.9999)
-		ip.sinb=0.9999;
-	if(ip.sinc > 0.9999)
-		ip.sinc=0.9999;
-//int clarke_calc(CLARKE *c,float As,float Bs,float Cs)
-	clarke_calc(&c2,ip.sina,ip.sinb,ip.sinc);
-//int pll_calc(pll *p,float Alpha,float Beta)
-	pll_calc(&pll,c2.Alpha,c2.Beta);
+// 	if(ip.sina > 0.9999)
+// 		ip.sina=0.9999;
+// 	if(ip.sinb > 0.9999)
+// 		ip.sinb=0.9999;
+// 	if(ip.sinc > 0.9999)
+// 		ip.sinc=0.9999;
+// //int clarke_calc(CLARKE *c,float As,float Bs,float Cs)
+// 	clarke_calc(&c2,ip.sina,ip.sinb,ip.sinc);
+// //int pll_calc(pll *p,float Alpha,float Beta)
+// 	pll_calc(&pll,c2.Alpha,c2.Beta);
 
-	if(pll.sin > 0.9999)
-		pll.sin=0.9999;
-	if(pll.cos > 0.9999)
-		pll.cos=0.9999;
+// 	if(pll.sin > 0.9999)
+// 		pll.sin=0.9999;
+// 	if(pll.cos > 0.9999)
+// 		pll.cos=0.9999;
 
-	/* Graphic */
-	//a[cnt]=pll.sin;
-	//cc[cnt]=pll.cos;
-	/* Graphic end */
+// 	/* Graphic */
+// 	//a[cnt]=pll.sin;
+// 	//cc[cnt]=pll.cos;
+// 	/* Graphic end */
 
-}
+// }
 
 void pi_calc(PI_Ctrl *p,float Ref,float Feedback) 
 {	 
@@ -449,22 +536,22 @@ void pi_calc(PI_Ctrl *p,float Ref,float Feedback)
     p->Errp = Ref - Feedback;
     
     // Compute the proportional output
-    p->Up = PI_Kp * p->Errp;
+    p->Up = p->Kp * p->Errp;
 
     // Compute the integral output
-    p->Ui = (p->OutPreSat == p->Out)?(p->Ui + PI_Ki*p->Errp*sample_time):p->Ui;
+    p->Ui = (p->OutPreSat == p->Out)?(p->Ui + p->Ki * p->Errp * sample_time):p->Ui;
 
     // Compute the pre-saturated output
     p->OutPreSat = p->Up + p->Ui ;     
     
 
-    if (p->OutPreSat > PI_OutMax)                   
+    if (p->OutPreSat > p->OutMax)                   
 	{
-	 p->Out =  PI_OutMax;
+	 p->Out =  p->OutMax;
 	}
-    else if (p->OutPreSat < PI_OutMin)
+    else if (p->OutPreSat < p->OutMin)
 	{ 
-	 p->Out =  PI_OutMin; 
+	 p->Out =  p->OutMin; 
 	}
 	else
 	 p->Out = p->OutPreSat;   	  
