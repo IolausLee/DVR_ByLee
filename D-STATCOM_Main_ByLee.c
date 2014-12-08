@@ -84,9 +84,12 @@ unsigned int cnt=0;//
 //unsigned int xint=0,tint=0;
 float sample_time=Tk;
 
-float U1,U2,I1,I2,Udc;
-float U1_offset=0,U2_offset=0,I1_offset=0,I2_offset=0,Udc_offset=0;
-float U1_offset_temp=0,U2_offset_temp=0,I1_offset_temp=0,I2_offset_temp=0,Udc_offset_temp=0;
+//float U1,U2;
+float I1,I2,Udc;
+//float U1_offset=0,U2_offset=0;
+float I1_offset=0,I2_offset=0,Udc_offset=0;
+//float U1_offset_temp=0,U2_offset_temp=0;
+float I1_offset_temp=0,I2_offset_temp=0,Udc_offset_temp=0;
 float Ua_pwm,Ub_pwm,Uc_pwm;
 
 interrupt void ADC_T1TOADC_isr(void);
@@ -100,11 +103,11 @@ void pi_calc(PI_Ctrl *p,float Ref,float Feedback);
 // Global variable for this example
 //DAC_DRV DAC=DAC_DRV_DEFAULTS;
 ADC_DRV AD=ADC_DRV_DEFAULTS;
-inverter_pll ip;
+//inverter_pll ip;
 PLL pll;
-line2phase l2p_U,l2p_I;
+line2phase l2p_U;
 CLARKE c_U,c_I,c2;
-PARK p_i;
+PARK p_I;
 ANTICLARKE ac;
 ANTIPARK ap;
 
@@ -122,7 +125,7 @@ ANTIPARK ap;
 				0.0   		// Output: PID output 
 				};*/
 
-/*PI_Ctrl PI_Ia={
+PI_Ctrl PI_Id={
 				30.0,			// Parameter: Proportional gain  
 				0,			// Parameter: Integral gain  
 				//Uq_Ref,   		// Input: Reference input 
@@ -135,7 +138,7 @@ ANTIPARK ap;
 				-600,		// Parameter: Minimum output 
 				0.0   		// Output: PID output 
 				};
-PI_Ctrl PI_Ib={
+PI_Ctrl PI_Iq={
 				30.0,			// Parameter: Proportional gain  
 				0,			// Parameter: Integral gain  
 				//Uq_Ref,   		// Input: Reference input 
@@ -148,19 +151,19 @@ PI_Ctrl PI_Ib={
 				-600,		// Parameter: Minimum output 
 				0.0   		// Output: PID output 
 				};
-PI_Ctrl PI_Ic={
-				30.0,			// Parameter: Proportional gain  
-				0,			// Parameter: Integral gain  
-				//Uq_Ref,   		// Input: Reference input 
-				//0.0,   		// Input: Feedback input 
-				0.0,			// Variable: Error   
-				0.0,			// Variable: Proportional output  
-				0.0,			// Variable: Integral output  
-				0.0,		    // Variable: Pre-saturated output 
-				600,		// Parameter: Maximum output 
-				-600,		// Parameter: Minimum output 
-				0.0   		// Output: PID output 
-				};*/
+// PI_Ctrl PI_Ic={
+// 				30.0,			// Parameter: Proportional gain  
+// 				0,			// Parameter: Integral gain  
+// 				//Uq_Ref,   		// Input: Reference input 
+// 				//0.0,   		// Input: Feedback input 
+// 				0.0,			// Variable: Error   
+// 				0.0,			// Variable: Proportional output  
+// 				0.0,			// Variable: Integral output  
+// 				0.0,		    // Variable: Pre-saturated output 
+// 				600,		// Parameter: Maximum output 
+// 				-600,		// Parameter: Minimum output 
+// 				0.0   		// Output: PID output 
+// 				};
 
 
 
@@ -264,71 +267,28 @@ void main(void)
 			//AD.ADChannelSel=0;
 			if(ADflag==0) {
 
-				//GpioDataRegs.GPBCLEAR.bit.GPIOB8=1;
-				//GpioDataRegs.GPBSET.bit.GPIOB9=1;
-
-				//loopcounter++;
-
 				ADCSmplePro(&AD);
 				//AD.LoopVar++;
 				
 				
 				/**采样完成后开始数据处理**/
-				//inverter_pll_calc();//计算相位
-				
-				//clarke_calc(&c_U,l2p_U.a,l2p_U.b,l2p_U.c);
-				clarke_calc(&c_U,l2p_U.a,l2p_U.b);
-				
-				pll_calc(&pll,c_U.Alpha,c_U.Beta);
 
-				if(pll.sin > 0.9999)
-					pll.sin=0.9999;
-				if(pll.cos > 0.9999)
-					pll.cos=0.9999;
+				pll_calc(&pll,l2p_U.a,l2p_U.b);
 
-//void pi_calc(PI_Ctrl *p,float Ref,float Feedback) 
-				pi_calc(&PI_Udc,Udc_ref,Udc);
+				clarke_calc(&c_I,I1,I2);
+				park_calc(&p_I,c_I.Alpha,c_I,Beta);
 
+				pi_calc(&PI_Id,Id_Ref,p_I.Ds);
+				pi_calc(&PI_Iq,Iq_Ref,p_I.Qs);
 
-//int antipark_calc(ANTIPARK *ap,float Ds,float Qs,float sina,float cosa)
-				antipark_calc(&ap,PI_Udc.Out,Iq_ref,pll.sin,pll.cos);
-//int anticlarke_calc(ANTICLARKE *ac,float Alpha,float Beta)
+				antipark_calc(&ap,PI_Id.Out,PI_Iq.Out,pll.sina,pll.cos);
 				anticlarke_calc(&ac,ap.Alpha,ap.Beta);
-
-//void pi_calc(PI_Ctrl *p,float Ref,float Feedback) 
-				pi_calc(&PI_Ia,ac.As,l2p_I.a);
-				pi_calc(&PI_Ib,ac.Bs,l2p_I.b);
-				pi_calc(&PI_Ic,ac.Cs,l2p_I.c);
-
-
-				
-				
-//int clarke_calc(CLARKE *c,float As,float Bs,float Cs)		
-				//clarke_calc(&c_U,l2p_U.Ua,l2p_U.Ub,l2p_U.Uc);//
-				//clarke_calc(&c_I,l2p_I.Ua,l2p_I.Ub,l2p_I.Uc);//
-
-//int park_calc(PARK *p,float Alpha,float Beta,float sina,float cosa)
-				//park_calc(&p_i,c_I.Alpha,c_I.Beta,pll.sin,pll.cos);//
-				
-
-				//pi_calc(&PI_d,Ud_Ref,p.Ds);//
-				//pi_calc(&PI_q,Uq_Ref,p.Qs);//
-
-//int antipark_calc(ANTIPARK *ap,float Ds,float Qs,float sina,float cosa)
-				//antipark_calc(&ap,PI_d.Out,PI_q.Out,pll.sin,pll.cos);//
-
-
-				//anticlarke_calc(&ac,ap.Alpha,ap.Beta);//
-				
 
 				/******归一化*********/
 				Ua_pwm=0.5+ac.As/1000;
 				Ub_pwm=0.5+ac.Bs/1000;
 				Uc_pwm=0.5+ac.Cs/1000;
 				/********************/
-
-				//a[cnt]=ac.As;
-				
 
 				/**设定占空比（比较中断）**/
 				EvaRegs.CMPR1=Ua_pwm*EvaRegs.T1PR;
@@ -358,33 +318,24 @@ interrupt void ADC_T1TOADC_isr(void)
 		//EvaRegs.EVAIFRA.bit.T1PINT=1;
 		//PieCtrlRegs.PIEACK .all =PIEACK_GROUP2;
 	} 
-
-	//EvaRegs.EVAIMRA.bit.T1PINT=1;  //
-	//EvaRegs.EVAIFRA .all =BIT7;    //
 	
-	PieCtrlRegs.PIEACK .all =PIEACK_GROUP2;  //
-	//return;
+	PieCtrlRegs.PIEACK .all =PIEACK_GROUP2; 
 }
 
 interrupt void ADC_SampleINT(void)
 {
-	//xint++;
+
 	XIntruptRegs.XINT1CR .all =0x0000;
 	if(AD.ADCFlag.bit.ADCSampleFlag==0) {
-		//while(1);
 		AD.ADCFlag.bit.ADCSampleFlag=1;
 	}
-	
-	//XIntruptRegs.XINT1CR .all =0x0000;
-	//AD.ADCFlag.bit.ADCSampleFlag=1;
+
 	XIntruptRegs.XINT1CR .all =0x0001;
-	PieCtrlRegs.PIEACK .all =PIEACK_GROUP1;	 //
-	//return;
+	PieCtrlRegs.PIEACK .all =PIEACK_GROUP1;	
 }
 
 void ADCSmplePro(ADC_DRV *v)
 {
-	//unsigned int Temp1;
 	if(v->ADChannelSel==6) 
 		v->ADChannelSel=0;
 	if(v->ADCFlag.bit.ADCCS0==1) {
@@ -459,12 +410,10 @@ void ADCSmplePro(ADC_DRV *v)
 
 /***int line_to_phase(line2phase *l,float Uab,float Ubc)***********/
 	line_to_phase(&l2p_U,U1,U2);//
-	line_to_phase(&l2p_I,I1,I2);
-
 
 /******Graphic*******/
 	//Temp=U1;
-	temp1[x]=U1;
+	//temp1[x]=U1;
 	//temp2[x]=l2p.Ubc;
 /******Graphic End*******/
 
