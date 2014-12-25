@@ -73,8 +73,8 @@ PAGE 0 :
    
    RAMM0      : origin = 0x000000, length = 0x000400
    BEGIN      : origin = 0x3F8000, length = 0x000002
-   //PRAMH0     : origin = 0x3F8002, length = 0x00FFE           
-   PRAMH0     : origin = 0x3F8002, length = 0x001025
+   PRAMH0     : origin = 0x3F8002, length = 0x00FFE           
+   //PRAMH0     : origin = 0x3F8002, length = 0x001025
    RESET      : origin = 0x3FFFC0, length = 0x000002  
    BOOTROM(RW): origin = 0x3FF000, length = 0x000fc0         
          
@@ -97,9 +97,11 @@ SECTIONS
       Place this section at the start of H0  */
 
    codestart        : > BEGIN,       PAGE = 0
-   ramfuncs         : > PRAMH0       PAGE = 0  
+   //ramfuncs         : > PRAMH0       PAGE = 0 
+   ramfuncs         : > DSRAM       PAGE = 1
    .text            : > PRAMH0,      PAGE = 0
-   .cinit           : > PRAMH0,      PAGE = 0
+   //.cinit           : > PRAMH0,      PAGE = 0
+   .cinit           : > DSRAM,      PAGE = 1
    .pinit           : > PRAMH0,      PAGE = 0
    .switch          : > RAMM0,       PAGE = 0
    .reset           : > RESET,       PAGE = 0, TYPE = DSECT /* not used, */
