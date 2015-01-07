@@ -61,7 +61,6 @@ void clarke_calc(CLARKE *c,float As,float Bs)
 	//c->Alpha=0.66666*As-0.33333*(Bs+Cs);
 	//c->Beta=0.57735*(Bs-Cs);
 
-	//return 0; 
 } 
 
 
@@ -185,6 +184,11 @@ typedef struct PLL_TYPEDEF
 
 int pll_calc(PLL *p,float Alpha,float Beta)
 {
+	
+	/******** π”√IQmath********/
+
+
+
 	float s;
 	s=sqrt(Alpha * Alpha + Beta * Beta);
 

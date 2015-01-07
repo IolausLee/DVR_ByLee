@@ -46,7 +46,7 @@
 // #define PI_OutMax 300
 // #define PI_OutMin -300
 
- #define Ud_Ref 2.8867
+ #define Ud_Ref 5.7735
  #define Uq_Ref 0
 
 // #define Udc_ref 20
@@ -101,36 +101,36 @@ ANTICLARKE ac;
 ANTIPARK ap;
 
 PI_Ctrl PI_Ud={
-				4.0,			// Parameter: Proportional gain  
-				150.0,			// Parameter: Integral gain  
+				20.0,			// Parameter: Proportional gain  
+				2000,			// Parameter: Integral gain  
 				//Uq_Ref,   		// Input: Reference input 
 				//0.0,   		// Input: Feedback input 
 				0.0,			// Variable: Error   
 				0.0,			// Variable: Proportional output  
 				0.0,			// Variable: Integral output  
 				0.0,		    // Variable: Pre-saturated output 
-				300,		// Parameter: Maximum output 
-				-300,		// Parameter: Minimum output 
+				30,		// Parameter: Maximum output 
+				-30,		// Parameter: Minimum output 
 				0.0   		// Output: PID output 
 				};
 				
 PI_Ctrl PI_Uq={
-				4.0,			// Parameter: Proportional gain  
-				150.0,			// Parameter: Integral gain  
+				20.0,			// Parameter: Proportional gain  
+				2000,			// Parameter: Integral gain  
 				//Uq_Ref,   		// Input: Reference input 
 				//0.0,   		// Input: Feedback input 
 				0.0,			// Variable: Error   
 				0.0,			// Variable: Proportional output  
 				0.0,			// Variable: Integral output  
 				0.0,		    // Variable: Pre-saturated output 
-				300,		// Parameter: Maximum output 
-				-300,		// Parameter: Minimum output 
+				30,		// Parameter: Maximum output 
+				-30,		// Parameter: Minimum output 
 				0.0   		// Output: PID output 
 				};
 
 PI_Ctrl PI_Id={
-				30.0,			// Parameter: Proportional gain  
-				0.0,			// Parameter: Integral gain  
+				1.5,			// Parameter: Proportional gain  
+				800,			// Parameter: Integral gain  
 				//Uq_Ref,   		// Input: Reference input 
 				//0.0,   		// Input: Feedback input 
 				0.0,			// Variable: Error   
@@ -142,8 +142,8 @@ PI_Ctrl PI_Id={
 				0.0   		// Output: PID output 
 				};
 PI_Ctrl PI_Iq={
-				30.0,			// Parameter: Proportional gain  
-				0.0,			// Parameter: Integral gain  
+				1.5,			// Parameter: Proportional gain  
+				800,			// Parameter: Integral gain  
 				//Uq_Ref,   		// Input: Reference input 
 				//0.0,   		// Input: Feedback input 
 				0.0,			// Variable: Error   
@@ -304,7 +304,7 @@ void main(void)
 				
 				/**采样完成后开始数据处理**/
 				
-				
+/************************************电压dq调节***************************************************************/
 				clarke_calc(&c_U,l2p_U.a,l2p_U.b);//电压3/2变换
 				
 				pll_calc(&pll_U,c_U.Alpha,c_U.Beta);//用电压值来进行定向
@@ -551,7 +551,7 @@ void pi_calc(PI_Ctrl *p,float Ref,float Feedback)
     p->Up = p->Kp * p->Errp;
 
     // Compute the integral output
-    p->Ui = (p->OutPreSat == p->Out)?(p->Ui + p->Ki * p->Errp * sample_time):p->Ui;
+    p->Ui = (p->OutPreSat == p->Out)?(p->Ui + p->Ki * p->Errp * sample_time * 2):p->Ui;
 
     // Compute the pre-saturated output
     p->OutPreSat = p->Up + p->Ui ;     
