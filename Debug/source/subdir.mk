@@ -8,6 +8,7 @@ C_SRCS += \
 ../source/DSP281x_DefaultIsr.c \
 ../source/DSP281x_GlobalVariableDefs.c \
 ../source/DSP281x_Gpio.c \
+../source/DSP281x_Mcbsp.c \
 ../source/DSP281x_MemCopy.c \
 ../source/DSP281x_PieCtrl.c \
 ../source/DSP281x_PieVect.c \
@@ -18,6 +19,7 @@ OBJS += \
 ./source/DSP281x_DefaultIsr.obj \
 ./source/DSP281x_GlobalVariableDefs.obj \
 ./source/DSP281x_Gpio.obj \
+./source/DSP281x_Mcbsp.obj \
 ./source/DSP281x_MemCopy.obj \
 ./source/DSP281x_PieCtrl.obj \
 ./source/DSP281x_PieVect.obj \
@@ -28,6 +30,7 @@ C_DEPS += \
 ./source/DSP281x_DefaultIsr.pp \
 ./source/DSP281x_GlobalVariableDefs.pp \
 ./source/DSP281x_Gpio.pp \
+./source/DSP281x_Mcbsp.pp \
 ./source/DSP281x_MemCopy.pp \
 ./source/DSP281x_PieCtrl.pp \
 ./source/DSP281x_PieVect.pp \
@@ -38,6 +41,7 @@ OBJS__QTD += \
 ".\source\DSP281x_DefaultIsr.obj" \
 ".\source\DSP281x_GlobalVariableDefs.obj" \
 ".\source\DSP281x_Gpio.obj" \
+".\source\DSP281x_Mcbsp.obj" \
 ".\source\DSP281x_MemCopy.obj" \
 ".\source\DSP281x_PieCtrl.obj" \
 ".\source\DSP281x_PieVect.obj" \
@@ -48,6 +52,7 @@ C_DEPS__QTD += \
 ".\source\DSP281x_DefaultIsr.pp" \
 ".\source\DSP281x_GlobalVariableDefs.pp" \
 ".\source\DSP281x_Gpio.pp" \
+".\source\DSP281x_Mcbsp.pp" \
 ".\source\DSP281x_MemCopy.pp" \
 ".\source\DSP281x_PieCtrl.pp" \
 ".\source\DSP281x_PieVect.pp" \
@@ -58,6 +63,7 @@ C_SRCS_QUOTED += \
 "../source/DSP281x_DefaultIsr.c" \
 "../source/DSP281x_GlobalVariableDefs.c" \
 "../source/DSP281x_Gpio.c" \
+"../source/DSP281x_Mcbsp.c" \
 "../source/DSP281x_MemCopy.c" \
 "../source/DSP281x_PieCtrl.c" \
 "../source/DSP281x_PieVect.c" \
@@ -90,6 +96,13 @@ source/DSP281x_Gpio.obj: ../source/DSP281x_Gpio.c $(GEN_OPTS)
 	@echo 'Building file: $<'
 	@echo 'Invoking: Compiler'
 	"D:/Program Files/Texas Instruments/ccsv4/tools/compiler/c2000/bin/cl2000" --silicon_version=28 -g --define="_DEBUG" --define="LARGE_MODEL" --include_path="D:/Program Files/Texas Instruments/ccsv4/tools/compiler/c2000/include" --include_path="C:/Users/ACIP-Lee/Documents/workspace/DVR_ByLee/include" --diag_warning=225 --large_memory_model --unified_memory --preproc_with_compile --preproc_dependency="source/DSP281x_Gpio.pp" --obj_directory="source" $(GEN_OPTS_QUOTED) $(subst #,$(wildcard $(subst $(SPACE),\$(SPACE),$<)),"#")
+	@echo 'Finished building: $<'
+	@echo ' '
+
+source/DSP281x_Mcbsp.obj: ../source/DSP281x_Mcbsp.c $(GEN_OPTS)
+	@echo 'Building file: $<'
+	@echo 'Invoking: Compiler'
+	"D:/Program Files/Texas Instruments/ccsv4/tools/compiler/c2000/bin/cl2000" --silicon_version=28 -g --define="_DEBUG" --define="LARGE_MODEL" --include_path="D:/Program Files/Texas Instruments/ccsv4/tools/compiler/c2000/include" --include_path="C:/Users/ACIP-Lee/Documents/workspace/DVR_ByLee/include" --diag_warning=225 --large_memory_model --unified_memory --preproc_with_compile --preproc_dependency="source/DSP281x_Mcbsp.pp" --obj_directory="source" $(GEN_OPTS_QUOTED) $(subst #,$(wildcard $(subst $(SPACE),\$(SPACE),$<)),"#")
 	@echo 'Finished building: $<'
 	@echo ' '
 

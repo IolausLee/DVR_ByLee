@@ -77,7 +77,8 @@ void anticlarke_calc(ANTICLARKE *ac,float Alpha,float Beta)
 {
 
 	/********Ê¹ÓÃIQmath********/
-	_iq15 As_IQ,Bs_IQ,Cs_IQ;
+	//_iq15 As_IQ,Bs_IQ,Cs_IQ;
+	_iq15 Bs_IQ,Cs_IQ;
 
 	ac->As = Alpha;
 

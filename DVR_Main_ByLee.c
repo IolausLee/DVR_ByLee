@@ -30,30 +30,33 @@
 #define V_T1PR 37.5*1000.0/2.0/fk   //连续增/减模式37.5*1000/2.0/fk；连续增模式37.5*1000/fk-1
 //#define Dot fk*20.0          //一个周期的点数,0.02/Ts
 //#define Dly V_Dly*fk*20.0/360.0    //需要延迟的点数
-#define V_ACTRA 0x0666    //低有效0x0999.高有效则为0x0666
+#define V_ACTRA 0x0999    //低有效0x0999.高有效则为0x0666
 #define V_T1CON 0x0942    //定时器T1时钟脉冲：37.5MHz,连续增/减模式0942;连续增模式1142
 #define V_DBTCONA 0x0AF8  //设置死区；设0x0AEC时，死区时间为4.27us
 #define Tk 1.0/fk/1000
 
 //定向
- #define f 50  //逆变器输出频率
- #define T 1.0/50//周期
- #define phi 0  //逆变器输出相位角
- #define w 2*pi*f 
+#define f 50  //逆变器输出频率
+#define T 1.0/50//周期
+#define phi 0  //逆变器输出相位角
+#define w 2*pi*f 
 
-// #define PI_Kp 4
-// #define PI_Ki 150
-// #define PI_OutMax 300
-// #define PI_OutMin -300
+//#define PI_Kp 4
+//#define PI_Ki 150
+//#define PI_OutMax 300
+//#define PI_OutMin -300
 
- #define Ud_Ref 5.7735
- #define Uq_Ref 0
+#define Ud_Ref 5.7735
+#define Uq_Ref 0
 
-// #define Udc_ref 20
-// #define Iq_ref 0
+//#define Udc_ref 20
+//#define Iq_ref 0
 
 //#define Id_Ref 0.5
 //#define Iq_Ref 0
+#define FIFO_LEVEL 1 //McBSP的FIFO级数
+
+
 
 //Uint16 EVAInterruptCount;
 Uint16 x=0;//temp[128],
@@ -69,6 +72,7 @@ unsigned int AD_corrention_flag=1;//AD校正标志位
 /****End****/
 
 unsigned int cnt=0;//
+unsigned int fifo;//McBSP的fifo循环计数
 //unsigned int xint=0,tint=0;
 float sample_time=Tk;
 
@@ -80,11 +84,25 @@ float U1_offset_temp=0,U2_offset_temp=0;
 float I1_offset_temp=0,I2_offset_temp=0;//,Udc_offset_temp=0;
 float Ua_pwm,Ub_pwm,Uc_pwm;
 
+//*********************McBSP全局变量声明**********************//
+Uint16 sdata1 = 0x0000;    // Sent Data 发送数据
+Uint16 sdata2 = 0x0000;    // Sent Data
+
+//*********************中断函数声明**********************//
 interrupt void ADC_T1TOADC_isr(void);
 interrupt void ADC_SampleINT(void);	
 
+
+//*********************函数声明**********************//
 void inverter_pll_calc(void);
 void pi_calc(PI_Ctrl *p,float Ref,float Feedback);
+
+void init_mcbsp_spi(void);
+void mcbsp_xmit(int a, int b);
+
+void mcbsp_fifo_init(void);
+void error(void);
+//*************************************************//
 
 // ADC start parameters
 //#define ADC_MODCLK 0x3	// HSPCLK = SYSCLKOUT/2*ADC_MODCLK2 = 150/(2*3) = 25MHz
@@ -92,6 +110,7 @@ void pi_calc(PI_Ctrl *p,float Ref,float Feedback);
 //DAC_DRV DAC=DAC_DRV_DEFAULTS;
 ADC_DRV AD=ADC_DRV_DEFAULTS;
 
+//*********************自定义结构体**********************//
 inverter_pll ip;
 PLL pll_I,pll_U,pll2;
 line2phase l2p_U;
@@ -252,7 +271,7 @@ void main(void)
 	EvaRegs.EVAIFRA.bit.T1PINT=1; 
 	
 //清除通用目的定时器1的计数器值
-	EvaRegs.T1CNT=0x0000;
+	EvaRegs.T1CNT=V_T1PR;
 	EvaRegs.T1CON.all=V_T1CON;  //0x0942,
 	EvaRegs.ACTRA.all = V_ACTRA;    //低有效0x0999.高有效则为0x0666
 	EvaRegs.DBTCONA.all = V_DBTCONA;   //设置死区
@@ -353,9 +372,22 @@ void main(void)
 /***********************************************************************************************************/
 
 				/**设定占空比（比较中断）**/
-				EvaRegs.CMPR1=Ua_pwm*EvaRegs.T1PR;
+//				EvaRegs.CMPR1=Ua_pwm*EvaRegs.T1PR;
+//				EvaRegs.CMPR2=Ub_pwm*EvaRegs.T1PR;
+//				EvaRegs.CMPR3=Uc_pwm*EvaRegs.T1PR;
+				
+				EvaRegs.CMPR1=0.3*EvaRegs.T1PR;
 				EvaRegs.CMPR2=Ub_pwm*EvaRegs.T1PR;
 				EvaRegs.CMPR3=Uc_pwm*EvaRegs.T1PR;
+				
+				
+				/**McBSP作为SPI发送占空比数据**/
+				
+				for( fifo = 1; fifo <= FIFO_LEVEL; fifo++)
+	     		{
+	        		mcbsp_xmit(sdata1,sdata2);//sdata1是低16位，sdata2是高16位
+
+	     		}
 
 
 
@@ -568,6 +600,127 @@ void pi_calc(PI_Ctrl *p,float Ref,float Feedback)
 	else
 	 p->Out = p->OutPreSat;   	  
 }
+
+
+void error(void)
+{
+    asm("     ESTOP0");  // test failed!! Stop!
+    for (;;);
+}
+
+
+void init_mcbsp_spi()
+{
+    // McBSP register settings in SPI master mode for Digital loop back
+    McbspaRegs.SPCR2.all=0x0000;        // Reset FS generator, sample rate generator & transmitter
+    //SPCR2.bit.FRST=0； //帧同步信号产生器复位
+    //SPCR2.bit.GRST=0; //复位采样率发生器
+    //SPCR2.bit.xrst=0; //发送器复位 
+    
+    McbspaRegs.SPCR1.all=0x0000;        // Reset Receiver, Right justify word, Digital loopback dis.
+    //SPCR1.bit.DLB=0; //数字回环模式disable
+    //SPCR1.bit.RRST=0; //接收器复位
+    
+    McbspaRegs.PCR.all=0x0F08;          //(CLKXM=CLKRM=FSXM=FSRM= 1, FSXP = 1)
+    //时钟停止模式，兼容SPI
+    //0x0F08=0000 1111 0000 1000
+    //bit11 FSXM=1 the MFSXA pin is an putput pin driver according to the FSGM bit
+    //bit9 CLKXM=1 the MCLKXA pin is an output pin driver by the internal sample rate generator.
+    //             Because CLKSTP is equal to 10b or 11b,MCLKRA is driver internally by MCLKXA
+    //
+    
+    //McbspaRegs.SPCR1.bit.DLB = 1;
+    McbspaRegs.SPCR1.bit.DLB = 0;
+    //Enable Digital Look Back Mode 使能数字环回模式
+    //0 Disable
+    McbspaRegs.SPCR1.bit.CLKSTP = 2;    // Together with CLKXP/CLKRP determines clocking scheme
+    //Clock stop mode. In SPI mode, this field is related to settings on CLKXP and CLKRP in the PCR register.
+    //0 0 Clock stop mode disabled. Normal clocking for non-SPI mode.
+    //   CLKXP  CLKRP
+	//1 0  0    0    In SPI mode: Clock starts with rising edge without delay
+	//1 0  1    0    In SPI mode: Clock starts with falling edge without delay
+	//1 1  0    1    In SPI mode: Clock starts with rising edge with delay
+	//1 1  1    1    In SPI mode: Clock starts with falling edge with delay
+    McbspaRegs.PCR.bit.CLKXP = 0;       // CPOL = 0, CPHA = 0 rising edge no delay
+    McbspaRegs.PCR.bit.CLKRP = 0;       // Receive data sampled on rising edge of CLKR
+    
+    
+    McbspaRegs.RCR2.bit.RDATDLY=01;     // FSX setup time 1 in master mode. 0 for slave mode (Receive)
+    //Receive data delay
+    //00b 0-bit data delay
+    //01b 1-bit data delay
+    //10b 2-bit data delay
+    //11b Reserved
+
+    McbspaRegs.XCR2.bit.XDATDLY=01;     // FSX setup time 1 in master mode. 0 for slave mode (Transmit)
+	//Transmit data delay
+	//00b 0-bit data delay
+	//01b 1-bit data delay
+	//10b 2-bit data delay
+	//11b Reserved
+
+    McbspaRegs.RCR1.bit.RWDLEN1=5;      // 32-bit word
+    //Receive word length 1
+    //000b 8 bits
+	//001b 12 bits
+	//010b 16 bits
+	//011b 20 bits
+	//100b 24 bits
+	//101b 32 bits
+	//11Xb Reserved
+
+    McbspaRegs.XCR1.bit.XWDLEN1=5;      // 32-bit word
+    //Transmit word length 1
+    //000b 8 bits
+	//001b 12 bits
+	//010b 16 bits
+	//011b 20 bits
+	//100b 24 bits
+	//101b 32 bits
+	//11Xb Reserved
+	
+    McbspaRegs.SRGR2.all=0x2000;        // CLKSM=1, FPER = 1 CLKG periods
+    //0x2000=0010 0 0 0
+    //bits15 GSYNC=0 The sample rate generator clock (CLKG) is free running
+    //bits14 reserved
+    //bits13 CLKSM=1 
+    
+    
+    McbspaRegs.SRGR1.all= 0x000F;       // Frame Width = 1 CLKG period, CLKGDV=16
+
+    McbspaRegs.SPCR2.bit.GRST=1;        // Enable the sample rate generator
+    delay_loop();                       // Wait at least 2 SRG clock cycles
+    McbspaRegs.SPCR2.bit.XRST=1;        // Release TX from Reset
+    McbspaRegs.SPCR1.bit.RRST=1;        // Release RX from Reset
+    McbspaRegs.SPCR2.bit.FRST=1;        // Frame Sync Generator reset
+}
+
+
+void mcbsp_xmit(int a, int b)
+{
+    McbspaRegs.DXR2.all=b; //high part of transmit data
+    McbspaRegs.DXR1.all=a; //transmit data (for 8-,12-,or 16-bit data)
+                           //or low part of transmit data (for 20-,24- or 32-bit data)
+}
+
+
+
+void mcbsp_fifo_init()
+{
+
+    McbspaRegs.MFFTX.all=0x0000;
+    McbspaRegs.MFFRX.all=0x001F;
+    McbspaRegs.MFFCT.all=0x0;
+    McbspaRegs.MFFINT.all=0x0;
+    McbspaRegs.MFFST.all=0x0;
+    McbspaRegs.MFFTX.bit.MFFENA=1;         // Enable FIFO
+    McbspaRegs.MFFTX.bit.TXFIFO_RESET=1;   // Enable Transmit channel
+    McbspaRegs.MFFRX.bit.RXFIFO_RESET=1;   // Enable Receive channel
+
+
+}
+
+
 
 
 
