@@ -82,6 +82,7 @@ float U1_offset=0,U2_offset=0;
 float I1_offset=0,I2_offset=0;//,Udc_offset=0;
 float U1_offset_temp=0,U2_offset_temp=0;
 float I1_offset_temp=0,I2_offset_temp=0;//,Udc_offset_temp=0;
+
 float Ua_pwm,Ub_pwm,Uc_pwm;
 
 //*********************McBSP全局变量声明**********************//
@@ -383,11 +384,14 @@ void main(void)
 				
 				/**McBSP作为SPI发送占空比数据**/
 				
-				for( fifo = 1; fifo <= FIFO_LEVEL; fifo++)
-	     		{
-	        		mcbsp_xmit(sdata1,sdata2);//sdata1是低16位，sdata2是高16位
-
-	     		}
+				
+				McbspaRegs.DXR2.all=(Uint16)(Ua_pwm>>16); //high part of transmit data
+    			McbspaRegs.DXR1.all=(Uint16)(Ua_pwm>>16);
+//				for( fifo = 1; fifo <= FIFO_LEVEL; fifo++)
+//	     		{
+//	        		mcbsp_xmit(sdata1,sdata2);//sdata1是低16位，sdata2是高16位
+//
+//	     		}
 
 
 
