@@ -89,6 +89,8 @@ float Ua_pwm,Ub_pwm,Uc_pwm;
 Uint16 sdata1 = 0x0000;    // Sent Data 发送数据
 Uint16 sdata2 = 0x0000;    // Sent Data
 
+int32 sdata1_temp;
+int32 sdata2_temp;
 //*********************中断函数声明**********************//
 interrupt void ADC_T1TOADC_isr(void);
 interrupt void ADC_SampleINT(void);	
@@ -383,15 +385,20 @@ void main(void)
 				
 				
 				/**McBSP作为SPI发送占空比数据**/
+				sdata1_temp=(int32)(ac.As+1000);
 				
+				sdata1=sdata1_temp;
 				
-				McbspaRegs.DXR2.all=(Uint16)(Ua_pwm>>16); //high part of transmit data
-    			McbspaRegs.DXR1.all=(Uint16)(Ua_pwm>>16);
+				//sdata2=((Uint32)Ua_pwm)<<16;
+				
+				McbspaRegs.DXR2.all=sdata1; //high part of transmit data
+    			McbspaRegs.DXR1.all=sdata2;
 //				for( fifo = 1; fifo <= FIFO_LEVEL; fifo++)
 //	     		{
 //	        		mcbsp_xmit(sdata1,sdata2);//sdata1是低16位，sdata2是高16位
 //
 //	     		}
+				asm("    nop");// Good place for a breakpoint
 
 
 
