@@ -258,7 +258,11 @@ void main(void)
 // This function is found in DSP281x_PieVect.c.
 	InitPieVectTable();
 	Init_Gpio();
+	InitMcbspGpio();  
 	//MemCopy(&RamfuncsLoadStart, &RamfuncsLoadEnd, &RamfuncsRunStart);
+	
+	mcbsp_fifo_init();     // Initialize the Mcbsp FIFO
+    init_mcbsp_spi();
 	
 // 初始化EVA定时器1	
 	ADREG=0;
@@ -391,8 +395,8 @@ void main(void)
 				
 				//sdata2=((Uint32)Ua_pwm)<<16;
 				
-				McbspaRegs.DXR2.all=sdata1; //high part of transmit data
-    			McbspaRegs.DXR1.all=sdata2;
+				McbspaRegs.DXR2.all=sdata2; //high part of transmit data
+    			McbspaRegs.DXR1.all=sdata1;
 //				for( fifo = 1; fifo <= FIFO_LEVEL; fifo++)
 //	     		{
 //	        		mcbsp_xmit(sdata1,sdata2);//sdata1是低16位，sdata2是高16位
