@@ -16,10 +16,12 @@
 #define pi 3.1415926  //圆周率
 
 //传感器参数
-#define Ku 151.11		//LV25_P电压传感器放大倍数。当限流电阻为110kΩ，测量电阻270Ω
+//#define Ku 151.11		//LV25_P电压传感器放大倍数。当限流电阻为110kΩ，测量电阻270Ω
+#define Ku 200		//LV25_P电压传感器放大倍数。当限流电阻为100kΩ，测量电阻200Ω
 //#define Kcur 6.67		//用LA55-P/SP50电流传感器，测量电阻为150Ω
 //#define Kcur 0.16667		//用LA55-P/SP50电流传感器，测量电阻为1200Ω，安匝数为5
-#define Kcur 13.33333	//用LA100-P/SP50电流传感器，测量电阻为150Ω
+//#define Kcur 13.33333	//用LA100-P/SP50电流传感器，测量电阻为150Ω
+#define Kcur 10	//用LA100-P/SP50电流传感器，测量电阻为100Ω
 #define Res 0.000305	//AD芯片的分辨率
 #define U_max 20        //继保动作电压
 
@@ -30,7 +32,9 @@
 #define V_T1PR 37.5*1000.0/2.0/fk   //连续增/减模式37.5*1000/2.0/fk；连续增模式37.5*1000/fk-1
 //#define Dot fk*20.0          //一个周期的点数,0.02/Ts
 //#define Dly V_Dly*fk*20.0/360.0    //需要延迟的点数
-#define V_ACTRA 0x0999    //低有效0x0999.高有效则为0x0666
+#define V_ACTRA 0x0666    //低有效0x0999.高有效则为0x0666 
+						  //高有效时DSP输出占空比为1-CMPR/TxPR
+						  //低有效时输出占空比为CMPR/TxPR
 #define V_T1CON 0x0942    //定时器T1时钟脉冲：37.5MHz,连续增/减模式0942;连续增模式1142
 #define V_DBTCONA 0x0AF8  //设置死区；设0x0AEC时，死区时间为4.27us
 #define Tk 1.0/fk/1000
@@ -54,7 +58,7 @@
 
 //#define Id_Ref 0.5
 //#define Iq_Ref 0
-#define FIFO_LEVEL 1 //McBSP的FIFO级数
+//#define FIFO_LEVEL 1 //McBSP的FIFO级数
 
 
 
@@ -67,7 +71,8 @@ unsigned int AD_corrention_flag=1;//AD校正标志位
 
 /****测试用****/
 //float Temp;
-//float a[200],b[200];//,cc[200];
+int i=0;
+float a[200],b[200];//,cc[200];
 //float temp1[128];//,temp2[128];
 /****End****/
 
@@ -86,11 +91,11 @@ float I1_offset_temp=0,I2_offset_temp=0;//,Udc_offset_temp=0;
 float Ua_pwm,Ub_pwm,Uc_pwm;
 
 //*********************McBSP全局变量声明**********************//
-Uint16 sdata1 = 0x0000;    // Sent Data 发送数据
-Uint16 sdata2 = 0x0000;    // Sent Data
-
-int32 sdata1_temp;
-int32 sdata2_temp;
+//Uint16 sdata1 = 0x0000;    // Sent Data 发送数据
+//Uint16 sdata2 = 0x0000;    // Sent Data
+//
+//int32 sdata1_temp;
+//int32 sdata2_temp;
 //*********************中断函数声明**********************//
 interrupt void ADC_T1TOADC_isr(void);
 interrupt void ADC_SampleINT(void);	
@@ -100,10 +105,10 @@ interrupt void ADC_SampleINT(void);
 void inverter_pll_calc(void);
 void pi_calc(PI_Ctrl *p,float Ref,float Feedback);
 
-void init_mcbsp_spi(void);
-void mcbsp_xmit(int a, int b);
+//void init_mcbsp_spi(void);
+//void mcbsp_xmit(int a, int b);
 
-void mcbsp_fifo_init(void);
+//void mcbsp_fifo_init(void);
 void error(void);
 //*************************************************//
 
@@ -177,7 +182,7 @@ PI_Ctrl PI_Iq={
 				0.0   		// Output: PID output 
 				};
 
-/*
+
 PI_Ctrl PI_Ia={
 				20.0,			// Parameter: Proportional gain  
 				0.0,			// Parameter: Integral gain  
@@ -191,7 +196,7 @@ PI_Ctrl PI_Ia={
 				-300.0,		// Parameter: Minimum output 
 				0.0   		// Output: PID output 
 				};
-PI_Ctrl PI_Ib={
+/*PI_Ctrl PI_Ib={
 				20.0,			// Parameter: Proportional gain  
 				0.0,			// Parameter: Integral gain  
 				//Uq_Ref,   		// Input: Reference input 
@@ -261,8 +266,8 @@ void main(void)
 	InitMcbspGpio();  
 	//MemCopy(&RamfuncsLoadStart, &RamfuncsLoadEnd, &RamfuncsRunStart);
 	
-	mcbsp_fifo_init();     // Initialize the Mcbsp FIFO
-    init_mcbsp_spi();
+	//mcbsp_fifo_init();     // Initialize the Mcbsp FIFO
+    //init_mcbsp_spi();
 	
 // 初始化EVA定时器1	
 	ADREG=0;
@@ -354,8 +359,8 @@ void main(void)
 
 				antipark_calc(&ap,PI_Id.Out,PI_Iq.Out,pll2.sin,pll2.cos);
 				anticlarke_calc(&ac,ap.Alpha,ap.Beta);
-
-				/******归一化********/
+//
+//				/******归一化********/
 				Ua_pwm=0.5+ac.As/2000;
 				Ub_pwm=0.5+ac.Bs/2000;
 				Uc_pwm=0.5+ac.Cs/2000;
@@ -367,7 +372,7 @@ void main(void)
 //				antipark_calc(&ap,PI_Ud.Out,PI_Uq.Out,pll2.sin,pll2.cos);
 //				anticlarke_calc(&ac,ap.Alpha,ap.Beta);
 //				
-//				pi_calc(&PI_Ia,I1,ac.As);
+//				pi_calc(&PI_Ia,I1,1);
 //				pi_calc(&PI_Ib,I2,ac.Bs);
 //				pi_calc(&PI_Ic,I3,ac.Cs);
 //
@@ -379,24 +384,27 @@ void main(void)
 /***********************************************************************************************************/
 
 				/**设定占空比（比较中断）**/
-//				EvaRegs.CMPR1=Ua_pwm*EvaRegs.T1PR;
-//				EvaRegs.CMPR2=Ub_pwm*EvaRegs.T1PR;
-//				EvaRegs.CMPR3=Uc_pwm*EvaRegs.T1PR;
-				
-				EvaRegs.CMPR1=0.3*EvaRegs.T1PR;
+				EvaRegs.CMPR1=Ua_pwm*EvaRegs.T1PR;
 				EvaRegs.CMPR2=Ub_pwm*EvaRegs.T1PR;
 				EvaRegs.CMPR3=Uc_pwm*EvaRegs.T1PR;
 				
 				
 				/**McBSP作为SPI发送占空比数据**/
-				sdata1_temp=(int32)(ac.As+1000);
+				//sdata1_temp=(int32)((ac.As/2000+0.5)*(25000/5));
+				//sdata1_temp=(int32)((0.3)*(25000/10));
 				
-				sdata1=sdata1_temp;
+				//sdata1=sdata1_temp;
 				
-				//sdata2=((Uint32)Ua_pwm)<<16;
+				//sdata2=sdata1_temp>>16;
 				
-				McbspaRegs.DXR2.all=sdata2; //high part of transmit data
-    			McbspaRegs.DXR1.all=sdata1;
+//				a[i]=sdata1;
+//				i++;
+//				if(i == 200)
+//					i=0;
+					
+				
+				//McbspaRegs.DXR2.all=sdata2; //high part of transmit data
+    			//McbspaRegs.DXR1.all=sdata1;
 //				for( fifo = 1; fifo <= FIFO_LEVEL; fifo++)
 //	     		{
 //	        		mcbsp_xmit(sdata1,sdata2);//sdata1是低16位，sdata2是高16位
@@ -417,7 +425,7 @@ interrupt void ADC_T1TOADC_isr(void)
 	//tint++;
 	inverter_pll_calc();
 	if(ADflag==0) {
-		*AD_CONVST=0;
+		*AD_CONVST=0;//数据未处理完成不应该进行采样
 		EvaRegs.EVAIMRA.bit.T1PINT=1;
 		EvaRegs.EVAIFRA .all =BIT7;
 	}//数据未处理完成时发生中断，继续进行标志位置位以便之后继续中断
@@ -472,7 +480,9 @@ void ADCSmplePro(ADC_DRV *v)
 	U1=(signed int)v->ADSampleResult0[x]*Ku*Res-U1_offset;	
 	U2=(signed int)v->ADSampleResult1[x]*Ku*Res-U2_offset;
 	
-	I1=(signed int)v->ADSampleResult2[x]*Kcur*Res-I1_offset;	
+	//I1=(signed int)v->ADSampleResult2[x]*Kcur*Res-I1_offset;	
+	I1=(signed int)v->ADSampleResult2[x]*10*Res-I1_offset;	
+	
 	I2=(signed int)v->ADSampleResult3[x]*Kcur*Res-I2_offset;
 
 	//Udc=(signed int)v->ADSampleResult4[x]*Ku*Res-Udc_offset;
@@ -519,6 +529,7 @@ void ADCSmplePro(ADC_DRV *v)
 //		GpioDataRegs.GPBSET.bit.GPIOB8=1;
 //		for(;;);
 //	}
+//直流稳压电源逆变无需用到继保
 
 
 /***int line_to_phase(line2phase *l,float Uab,float Ubc)***********/
@@ -623,7 +634,7 @@ void error(void)
     for (;;);
 }
 
-
+/*
 void init_mcbsp_spi()
 {
     // McBSP register settings in SPI master mode for Digital loop back
@@ -733,7 +744,7 @@ void mcbsp_fifo_init()
     McbspaRegs.MFFRX.bit.RXFIFO_RESET=1;   // Enable Receive channel
 
 
-}
+}*/
 
 
 
